@@ -61,16 +61,6 @@ class _App(tk.Tk):
         self.geometry('{}x{}+{}+{}'.format(str(monitor.width), str(monitor.height), str(monitor.x), str(monitor.y)))
         self.after(5, self.update_geometry)
 
-def _sort_coords(pos1, pos2):
-    if pos1 == None or pos2 == None:
-        raise ValueError("(pos1 or pos2) = None")
-    if pos1 == pos2:
-        return (pos1, pos2)
-    x_coords, y_coords = map(list, (zip(pos1, pos2)))
-    x_coords.sort()
-    y_coords.sort()
-    return zip(x_coords, y_coords)
-
 def _run_tkinter(exit_hotkey = None): #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
     app = _App()
     if exit_hotkey:
@@ -78,10 +68,15 @@ def _run_tkinter(exit_hotkey = None): #Initialises tkinter loop and starts the l
     app.mainloop()
     return app.pos1_absolute, app.pos2_absolute
 
+def _sort_coords(pos_tuple):
+    coordinates = map(sorted, (zip(*pos_tuple)))
+    return (Pos2(*l) for l in zip(*coordinates))
+
 def grab(exit_hotkey = None):
-    pos1, pos2 = _run_tkinter(exit_hotkey)
-    pos1, pos2 = _sort_coords(list(pos1), list(pos2))
+    pos1, pos2 = _sort_coords(_run_tkinter(exit_hotkey))
     if pos1 == pos2: return None
-    image = getRectAsImage((pos1[0], pos1[1], pos2[0], pos2[1])) # BUG, breaks with Window's content scaling
-    #image.show() # For debugging
+    image = getRectAsImage((*pos1, *pos2)) # BUG, breaks with Window's content scaling
+    image.show() # For debugging
     return image # in PIL format
+
+grab()
