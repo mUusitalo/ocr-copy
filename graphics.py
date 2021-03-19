@@ -19,12 +19,15 @@ class _App(tk.Tk):
 
     def init_tk(self):
         self.overrideredirect(1)
-        self.attributes('-topmost', True)
         self.config(bg='white')
         self.wm_attributes("-alpha", ALPHA)
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
         self.geometry('{}x{}+{}+{}'.format(str(self.screen_width), str(self.screen_height), str(0), str(0)))
+        self.attributes('-topmost', True)
+        self.focus_force()
+        self.grab_set()
+
         
         #tkinter events
         self.bind('<Button-1>', self.on_click)
@@ -61,10 +64,9 @@ class _App(tk.Tk):
         self.geometry('{}x{}+{}+{}'.format(str(monitor.width), str(monitor.height), str(monitor.x), str(monitor.y)))
         self.after(5, self.update_geometry)
 
-def _run_tkinter(exit_hotkey = None): #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
+def _run_tkinter(): #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
     app = _App()
-    if exit_hotkey:
-        app.bind(exit_hotkey, app.exit)
+    app.bind('<Escape>', app.exit)
     app.mainloop()
     return app.pos1_absolute, app.pos2_absolute
 
@@ -72,11 +74,14 @@ def _sort_coords(pos_tuple):
     coordinates = map(sorted, (zip(*pos_tuple)))
     return (Pos2(*l) for l in zip(*coordinates))
 
-def grab(exit_hotkey = None):
-    pos1, pos2 = _sort_coords(_run_tkinter(exit_hotkey))
-    if pos1 == pos2: return None
-    image = getRectAsImage((*pos1, *pos2)) # BUG, breaks with Window's content scaling
-    image.show() # For debugging
-    return image # in PIL format
+def grab():
+    try:
+        pos1, pos2 = _sort_coords(_run_tkinter())
+        image = getRectAsImage((*pos1, *pos2)) # BUG, breaks with Window's content scaling
+        #image.show() # For debugging
+        return image # in PIL format
+    except:
+        return None
 
-grab()
+if __name__ == '__main__':
+    grab()
