@@ -55,7 +55,6 @@ class _App(tk.Tk):
         self.exit()
 
     def exit(self):
-        print("exit function called")
         self.exit_ = True
         self.destroy()
 
