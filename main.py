@@ -1,8 +1,9 @@
 import pyperclip
 
-import hotkey_listener
-from graphics import grab
 from analyze import analyze
+from graphics import grab
+import hotkey_listener
+import settings # Imported to initialize singleton
 
 def main():
     while True:
