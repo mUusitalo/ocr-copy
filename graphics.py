@@ -4,12 +4,13 @@ from desktopmagic.screengrab_win32 import getRectAsImage
 from monitor import *
 from pos2 import Pos2
 
-ALPHA = 0.5
+ALPHA = 0.2
 
 class _App(tk.Tk):
 
     def __init__(self):
         super().__init__()
+        self.exit_ = False
         self.init_tk()
         self.frame = None
         self.pos1_relative = None
@@ -51,13 +52,15 @@ class _App(tk.Tk):
 
     def on_release(self, event): #grabs pos2 and destroys the _App
         self.pos2_absolute = Pos2(self.winfo_pointerx(), self.winfo_pointery())
-        self.destroy()
+        self.exit()
 
-    def exit(self, _):
+    def exit(self):
         print("exit function called")
+        self.exit_ = True
         self.destroy()
 
     def update_geometry(self): #Checks which monitor the cursor is on
+        if self.exit_: return
         self.focus_set()
         self.focus_force()
         monitor = MonitorHandler.find_new_monitor(Pos2(self.winfo_pointerx(), self.winfo_pointery()))
@@ -77,7 +80,7 @@ def _sort_coords(pos_tuple):
 def grab():
     try:
         pos1, pos2 = _sort_coords(_run_tkinter())
-        image = getRectAsImage((*pos1, *pos2)) # BUG, breaks with Window's content scaling
+        image = getRectAsImage((*pos1, *pos2)).convert('L') # BUG, breaks with Window's content scaling
         #image.show() # For debugging
         return image # in PIL format
     except:
