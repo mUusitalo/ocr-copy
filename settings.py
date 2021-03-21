@@ -5,7 +5,7 @@ import re
 import pytesseract as tess
 from pynput import keyboard as kb
 
-SETTINGS_PATH = './settings.json'
+SETTINGS_PATH = 'settings.json'
 
 # Default settings
 TESSERACT_PATH = str(pathlib.Path('C:/Program Files/Tesseract-OCR/tesseract.exe'))

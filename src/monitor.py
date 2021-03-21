@@ -1,6 +1,6 @@
 import screeninfo
 
-from pos2 import Pos2
+from .pos2 import Pos2
 
 class Monitor(screeninfo.Monitor):
     def has_pos(self, pos):

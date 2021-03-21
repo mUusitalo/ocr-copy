@@ -1,8 +1,8 @@
 import tkinter as tk
 from desktopmagic.screengrab_win32 import getRectAsImage
 
-from monitor import *
-from pos2 import Pos2
+from .monitor import *
+from .pos2 import Pos2
 
 ALPHA = 0.2
 
