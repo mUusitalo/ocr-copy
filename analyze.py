@@ -7,4 +7,4 @@ def analyze(image):
     if data:
         return data[0].data.decode()
     else:
-        return tess.image_to_string(image, lang=Settings().languages)
+        return tess.image_to_string(image, lang=Settings().languages).strip()
