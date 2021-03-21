@@ -4,6 +4,9 @@
 
 Ocr-copy is a tool for easily copying text from your screen. It uses [Tesseract](https://github.com/tesseract-ocr/tesseract) as the OCR engine, [tkinter](https://docs.python.org/3/library/tkinter.html) for graphics, and [pynput](https://pypi.org/project/pynput/) for keyboard monitoring. In addition to reading text this tool can also scan barcodes of all kinds using [pyzbar](https://pypi.org/project/pyzbar/).
 
+## Demo
+![demo](demo.gif)
+
 ## Requirements
 
 Tesseract has to be installed manually. Binaries can be found [here](https://tesseract-ocr.github.io/tessdoc/Home.html).
