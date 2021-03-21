@@ -1,9 +1,12 @@
+import functools
 import json
 import pathlib
 import re
 
 import pytesseract as tess
 from pynput import keyboard as kb
+
+print = functools.partial(print, flush=True)
 
 SETTINGS_PATH = 'settings.json'
 
