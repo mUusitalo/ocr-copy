@@ -10,7 +10,6 @@ class _App(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.exit_ = False
         self.init_tk()
         self.frame = None
         self.pos1_relative = None
@@ -55,16 +54,19 @@ class _App(tk.Tk):
         self.exit()
 
     def exit(self):
-        self.exit_ = True
+        if self.cancel_update_id:
+            try:
+                self.after_cancel(self.cancel_update_id)
+            except Exception as e:
+                print(e)
         self.destroy()
 
     def update_geometry(self): #Checks which monitor the cursor is on
-        if self.exit_: return
         self.focus_set()
         self.focus_force()
         monitor = MonitorHandler.find_new_monitor(Pos2(self.winfo_pointerx(), self.winfo_pointery()))
         self.geometry('{}x{}+{}+{}'.format(str(monitor.width), str(monitor.height), str(monitor.x), str(monitor.y)))
-        self.after(5, self.update_geometry)
+        self.cancel_update_id = self.after(5, self.update_geometry)
 
 def _run_tkinter(): #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
     app = _App()
