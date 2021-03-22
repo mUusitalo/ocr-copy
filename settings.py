@@ -3,8 +3,7 @@ import functools
 import json
 import pathlib
 import re
-from types import FunctionType
-from typing import Any
+from typing import Callable, Iterator
 
 import pytesseract as tess
 from pynput import keyboard as kb
@@ -12,6 +11,7 @@ from pynput import keyboard as kb
 print = functools.partial(print, flush=True)
 
 class InputError(Exception):
+    """Class that indicates bad user inputs"""
     pass
 
 SETTINGS_PATH: str = 'settings.json'
@@ -39,153 +39,155 @@ def get_available_languages() -> set[str]:
         return set(tess.get_languages())
     except EnvironmentError:
         return AVAILABLE_LANGUAGES
+    
+class SettingValidityTester:
+    """Class containing only static methods for testing setting validity"""
+    @staticmethod
+    def hotkey(hotkey: str) -> str:
+        """Try to parse hotkey to raise an InputError if it's invalid."""
+        try:
+            kb.HotKey.parse(hotkey)
+            return hotkey
+        except:
+            raise InputError(f"Invalid hotkey: {hotkey}")
 
-def test_hotkey(hotkey: str = ''):
-    if not hotkey: return hotkey
-    try:
-        kb.HotKey.parse(hotkey)
-        return hotkey
-    except:
-        raise InputError(f"Invalid key: {hotkey}")
+    @staticmethod
+    def tesseract_path(path: str) -> str:
+        """Set pytesseract's path to tesseract.exe.
+        Try to get version number to raise an exception if the path is invalid.
+        Raise InputError when an invalid path is entered.
+        """
+        path = str(pathlib.Path(path))
+        tess.pytesseract.tesseract_cmd = path
+        try:
+            print(f"Tesseract version: {tess.get_tesseract_version()}") # Will throw error if path is invalid
+        except:
+            raise InputError("Invalid path to tesseract.exe. Running the program now will produce an error.")
+        return path
+
+    @staticmethod
+    def languages(input_languages: str) -> str:
+        """Parse languages using regex.
+        Check that they're all in the available languages.
+        Throw InputError if an invalid string is entered.
+        """
+        lang_list: list[str] = re.findall(r'(?i)[\w_]+', input_languages)
+        available_languages: set[str] = get_available_languages()
+        for lang in lang_list:
+            if not lang.lower() in available_languages:
+                raise InputError(f"Unexpected input: {lang}")
+        return '+'.join(lang_list).lower()
 
 class Settings:
+    """Class for storing setting and generating them from user input.
+    Also contains methods for reading and writing settings to and from .json.
+    Uses SettingsValidityTester for testing inputs.
+    """
+    # Dict containing each setting and the method for testing it's input value.
+    value_test_map = {
+        'capture_hotkey': SettingValidityTester.hotkey,
+        'exit_hotkey': SettingValidityTester.hotkey,
+        'tesseract_path': SettingValidityTester.tesseract_path,
+        'languages': SettingValidityTester.languages
+    }
 
-    all_settings = ['capture_hotkey', 'exit_hotkey', 'tesseract_path', 'languages']
-
-
-    def __init__(self, 
-                 capture_hotkey: str='', exit_hotkey: str='',
-                 tesseract_path: str='', languages: str='', verbose=True):
-        self._verbose: bool = verbose
+    def __init__(self,
+                 capture_hotkey:str='', exit_hotkey:str='',
+                 tesseract_path:str='', languages:str=''):
         self.capture_hotkey: str = capture_hotkey
         self.exit_hotkey: str = exit_hotkey
         self.tesseract_path: str = tesseract_path
         self.languages: str = languages
 
-    def __iter__(self):
-        for setting in self.all_settings:
+    @staticmethod
+    def from_file() -> 'Settings':
+        """Generate Settings object from .json file"""
+        try:
+            with open(SETTINGS_PATH, 'r') as settings_file:
+                return Settings(**json.loads(settings_file.read()))
+        except:
+            print("Settings file is missing or corrupted.")
+            try: # try-except here in case DEFAULT_SETTINGS doesn't exist
+                return copy(DEFAULT_SETTINGS)
+            except:
+                return Settings()
+
+    def to_file(self) -> None:
+        """Write Settings object to file"""
+        with open(SETTINGS_PATH, 'w') as settings_file:
+            settings_file.write(json.dumps(dict(self)))
+
+    def __iter__(self) -> Iterator[tuple[str, str]]:
+        """Yield tuple with attribute name and value for each name in value_test_map."""
+        for setting in self.value_test_map.keys():
             yield setting, getattr(self, setting)
 
     def __str__(self):
+        """Generate user-readable string containing all settings and their values."""
         return '\n'.join(f"    {setting}: {value or '-'}" for setting, value in self)
 
-    def try_setattr(self, attr: str, value: Any, callback: FunctionType = None):
-        """Catch InputErrors"""
+    def _try_setattr(self, name: str, value: str, callback: Callable = None) -> None:
+        """Test input value and set it if it's valid.
+        Call 'callback' if an InputError is caught.
+        """
         try:
-            setattr(self, attr, value)
+            if value:
+                value = self.value_test_map[name](value) 
+            setattr(self, name, value)
         except InputError as e:
             print(e)
             if callback: callback()
 
-    @staticmethod
-    def from_dict(settings_dict) -> 'Settings':
-        settings = Settings()
-        for key, value in settings_dict.items():
-            if key in Settings.all_settings:
-                settings.try_setattr(key, value)
-        return settings
-
-    @staticmethod
-    def from_file() -> 'Settings':
-        try:
-            with open(SETTINGS_PATH, 'r') as settings_file:
-                settings_dict = json.loads(settings_file.read())
-            return Settings.from_dict(settings_dict)
-        except:
-            print("Settings file is missing or corrupted.")
-            return copy(DEFAULT_SETTINGS)
-
-    @staticmethod
-    def to_file(settings: 'Settings'):
-        settings_dict = {setting: value for setting, value in settings}
-        with open(SETTINGS_PATH, 'w') as settings_file:
-            settings_file.write(json.dumps(settings_dict))
-
-    def _prompt_setting(self, setting: str):
+    def _prompt_setting(self, setting: str) -> None:
+        """Ask the user to input a certain setting's value.
+        Call function again if the value is invalid but don't do anything if the input is blank.
+        """
         print(f"\nCurrent {setting}: {getattr(self, setting) or '-'}")
-        output = input(f"Enter {setting}: ")
+        output: str = input(f"Enter {setting}: ")
         if not output: return # Setting skipped
-        self.try_setattr(setting, output.strip(), lambda: self._prompt_setting(setting))
-            
+        self._try_setattr(setting, output.strip(), lambda: self._prompt_setting(setting))
 
+    def _reset_defaults(self) -> None:
+        """Reset default settings. If DEFAULT_SETTINGS doesn't exist, use a blank Settings object."""
+        try:
+            new_settings: Settings = DEFAULT_SETTINGS
+        except:
+            new_settings: Settings = Settings()
+        for key, value in new_settings:
+            self._try_setattr(key, value)
+            
     def _prompt_reset(self) -> None:
-        reset = input("Restore defaults? (y/N):")
+        """Ask the user whether they want to reset the values.
+        If yes, then copy the default settings.
+        """
+        reset: str = input("Restore defaults? (y/N):")
         if reset == 'y':
-            for key, value in DEFAULT_SETTINGS:
-                self.try_setattr(key, value)
+            self._reset_defaults()
             print(f"\nCurrent settings:\n{str(self)}\n")
             
-    def run_dialog(self) -> None:
+    def run_dialog(self) -> 'Settings':
+        """Run dialog for entering settings.
+        First ask the user whether to reset the values.
+        Then ask to input each setting.
+        Leaving a setting blank will skip, entering spaces will clear.
+        Entering an invalid setting will let the user try again.
+        """
         print(f"\nCurrent settings:\n{str(self)}\n")
         self._prompt_reset()
         print("Enter settings. Leave blank to skip and enter one space to clear.")
         for setting, _ in self:
             self._prompt_setting(setting)
         print(f"\nCurrent settings:\n{str(self)}\n")
-
-    @property
-    def tesseract_path(self) -> str:
-        return self._tesseract_path
-
-    def _warn_no_connection(self) -> None:
-        if not self._verbose: return
-        print("The current path to tesseract.exe is invalid. Running the program now will produce a runtime error.")
-
-    @tesseract_path.setter
-    def tesseract_path(self, input_path: str) -> None:
-        if not input_path:
-            self._tesseract_path = ''
-            self._warn_no_connection()
-        else:
-            path = str(pathlib.Path(input_path))
-            tess.pytesseract.tesseract_cmd = path
-            try:
-                tesseract_version = tess.get_tesseract_version() # Will throw error if path is invalid
-            except EnvironmentError as e:
-                raise InputError(str(e))
-            if self._verbose:
-                print(f"Tesseract version: {tesseract_version}")
-            self._tesseract_path: str = path
-    
-    @property
-    def languages(self) -> str:
-        return self._languages
-
-    @languages.setter
-    def languages(self, input_languages: str) -> None:
-        lang_list: list[str] = re.findall(r'(?i)[\w_]+', input_languages)
-        available_languages: set[str] = get_available_languages()
-        for lang in lang_list:
-            if not lang.lower() in available_languages:
-                raise InputError(f"Unexpected input: {lang}")
-        self._languages: str = '+'.join(lang_list).lower()
-
-    @property
-    def exit_hotkey(self) -> str:
-        return self._exit_hotkey
-    
-    @exit_hotkey.setter
-    def exit_hotkey(self, hotkey: str) -> None:
-        self._exit_hotkey: str = test_hotkey(hotkey)
-
-    @property
-    def capture_hotkey(self) -> str:
-        return self._capture_hotkey
-
-    @capture_hotkey.setter
-    def capture_hotkey(self, hotkey: str) -> None:
-        self._capture_hotkey: str = test_hotkey(hotkey)
+        return self
 
 DEFAULT_SETTINGS: Settings = Settings(
     tesseract_path=str(pathlib.Path('C:/Program Files/Tesseract-OCR/tesseract.exe')),
     exit_hotkey='<shift>+<esc>',
     capture_hotkey='<alt>+s',
-    languages='eng',
-    verbose=False
+    languages='eng'
 )
 
-settings = Settings().from_file()
+settings: Settings = Settings.from_file()
 
 if __name__ == '__main__':
-    settings.run_dialog()
-    Settings.to_file(settings)
+    settings.run_dialog().to_file()
