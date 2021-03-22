@@ -94,10 +94,11 @@ class Settings:
     def __init__(self,
                  capture_hotkey:str='', exit_hotkey:str='',
                  tesseract_path:str='', languages:str=''):
-        self.capture_hotkey: str = capture_hotkey
-        self.exit_hotkey: str = exit_hotkey
-        self.tesseract_path: str = tesseract_path
-        self.languages: str = languages
+        # Code smell but I can't figure out a better way of doing this. Also pyright doesn't like this.
+        self._try_setattr('capture_hotkey', capture_hotkey)
+        self._try_setattr('exit_hotkey', exit_hotkey)
+        self._try_setattr('tesseract_path', tesseract_path)
+        self._try_setattr('languages', languages)
 
     @staticmethod
     def from_file() -> 'Settings':
@@ -131,9 +132,9 @@ class Settings:
         Call 'callback' if an InputError is caught.
         """
         try:
-            if value:
-                value = self.value_test_map[name](value) 
-            setattr(self, name, value)
+            stripped: str = value.strip()
+            output: str = self.value_test_map[name](stripped) if stripped else ''
+            setattr(self, name, output)
         except InputError as e:
             print(e)
             if callback: callback()
@@ -145,7 +146,7 @@ class Settings:
         print(f"\nCurrent {setting}: {getattr(self, setting) or '-'}")
         output: str = input(f"Enter {setting}: ")
         if not output: return # Setting skipped
-        self._try_setattr(setting, output.strip(), lambda: self._prompt_setting(setting))
+        self._try_setattr(setting, output, lambda: self._prompt_setting(setting))
 
     def _reset_defaults(self) -> None:
         """Reset default settings. If DEFAULT_SETTINGS doesn't exist, use a blank Settings object."""
