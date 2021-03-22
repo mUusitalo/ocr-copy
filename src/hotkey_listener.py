@@ -1,8 +1,7 @@
 from pynput import keyboard as kb
 import os
 
-from settings import Settings
-settings = Settings()
+from settings import settings
 
 def listen():
     with kb.GlobalHotKeys({
