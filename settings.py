@@ -3,6 +3,8 @@ import functools
 import json
 import pathlib
 import re
+from types import FunctionType
+from typing import Any
 
 import pytesseract as tess
 from pynput import keyboard as kb
@@ -67,15 +69,20 @@ class Settings:
     def __str__(self):
         return '\n'.join(f"    {setting}: {value or '-'}" for setting, value in self)
 
+    def try_setattr(self, attr: str, value: Any, callback: FunctionType = None):
+        """Catch InputErrors"""
+        try:
+            setattr(self, attr, value)
+        except InputError as e:
+            print(e)
+            if callback: callback()
+
     @staticmethod
     def from_dict(settings_dict) -> 'Settings':
         settings = Settings()
         for key, value in settings_dict.items():
             if key in Settings.all_settings:
-                try:
-                    setattr(settings, key, value)
-                except InputError:
-                    pass
+                settings.try_setattr(key, value)
         return settings
 
     @staticmethod
@@ -98,20 +105,14 @@ class Settings:
         print(f"\nCurrent {setting}: {getattr(self, setting) or '-'}")
         output = input(f"Enter {setting}: ")
         if not output: return # Setting skipped
-        try:
-            setattr(self, setting, output.strip())
-        except InputError as e:
-            print(e)
-            self._prompt_setting(setting)
+        self.try_setattr(setting, output.strip(), lambda: self._prompt_setting(setting))
+            
 
     def _prompt_reset(self) -> None:
         reset = input("Restore defaults? (y/N):")
         if reset == 'y':
             for key, value in DEFAULT_SETTINGS:
-                try:
-                    setattr(self, key, value)
-                except InputError:
-                    pass
+                self.try_setattr(key, value)
             print(f"\nCurrent settings:\n{str(self)}\n")
             
     def run_dialog(self) -> None:
