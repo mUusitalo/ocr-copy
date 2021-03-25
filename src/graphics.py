@@ -1,24 +1,27 @@
 import tkinter as tk
+from typing import Iterable, Mapping, Union
 from desktopmagic.screengrab_win32 import getRectAsImage
+from PIL.Image import Image
 
 from .monitor import *
 from .pos2 import Pos2
 
-ALPHA = 0.2
+
+ALPHA: float = 0.2
 
 class _App(tk.Tk):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.init_tk()
-        self.frame = None
-        self.pos1_relative = None
-        self.pos1_absolute = None
-        self.pos2_absolute = None
+        self.frame: Union[tk.Frame, None] = None
+        self.pos1_relative: Union[Pos2, None] = None
+        self.pos1_absolute: Union[Pos2, None] = None
+        self.pos2_absolute: Union[Pos2, None] = None
         self.update_geometry()
 
-    def init_tk(self):
-        self.overrideredirect(1)
+    def init_tk(self) -> None:
+        self.overrideredirect(True)
         self.config(bg='white')
         self.wm_attributes("-alpha", ALPHA)
         self.screen_width = self.winfo_screenwidth()
@@ -35,25 +38,25 @@ class _App(tk.Tk):
         self.bind('<Motion>', self.on_move)
         self.focus_force()
 
-    def on_click(self, event): #grabs pos1 and initializes the frame
+    def on_click(self, event) -> None: #grabs pos1 and initializes the frame
         self.pos1_relative = Pos2(event.x, event.y) #For tkinter
         self.pos1_absolute = Pos2(self.winfo_pointerx(), self.winfo_pointery()) #For screenshot
 
-    def on_move(self, event): #updates the frame
+    def on_move(self, event) -> None: #updates the frame
         if not self.pos1_relative: return
         if self.frame:
             self.frame.destroy()
-        pos = Pos2(event.x, event.y)
-        diff = self.pos1_relative-pos
+        pos: Pos2 = Pos2(event.x, event.y)
+        diff: Pos2 = self.pos1_relative-pos
         self.frame = tk.Frame(master=self, width=abs(diff.x), height=abs(diff.y), bg="black")
         self.frame.place(x=self.pos1_relative[0] if diff.x < 0 else self.pos1_relative.x - diff.x,
                          y=self.pos1_relative[1] if diff.y < 0 else self.pos1_relative[1] - diff.y)
 
-    def on_release(self, event): #grabs pos2 and destroys the _App
+    def on_release(self, _) -> None: #grabs pos2 and destroys the _App
         self.pos2_absolute = Pos2(self.winfo_pointerx(), self.winfo_pointery())
         self.exit()
 
-    def exit(self):
+    def exit(self) -> None:
         if self.cancel_update_id:
             try:
                 self.after_cancel(self.cancel_update_id)
@@ -64,21 +67,21 @@ class _App(tk.Tk):
     def update_geometry(self): #Checks which monitor the cursor is on
         self.focus_set()
         self.focus_force()
-        monitor = MonitorHandler.find_new_monitor(Pos2(self.winfo_pointerx(), self.winfo_pointery()))
+        monitor: Monitor = MonitorHandler.find_new_monitor(Pos2(self.winfo_pointerx(), self.winfo_pointery()))
         self.geometry('{}x{}+{}+{}'.format(str(monitor.width), str(monitor.height), str(monitor.x), str(monitor.y)))
         self.cancel_update_id = self.after(5, self.update_geometry)
 
-def _run_tkinter(): #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
-    app = _App()
+def _run_tkinter() -> tuple[Union[Pos2, None], Union[Pos2, None]]: #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
+    app: _App = _App()
     app.bind('<Escape>', app.exit)
     app.mainloop()
     return app.pos1_absolute, app.pos2_absolute
 
 def _sort_coords(pos_tuple):
-    coordinates = map(sorted, (zip(*pos_tuple)))
+    coordinates = map(sorted, zip(*pos_tuple))
     return (Pos2(*l) for l in zip(*coordinates))
 
-def grab():
+def grab() -> Union[Image, None]:
     try:
         pos1, pos2 = _sort_coords(_run_tkinter())
         image = getRectAsImage((*pos1, *pos2)).convert('L') # BUG, breaks with Window's content scaling
@@ -86,6 +89,3 @@ def grab():
         return image # in PIL format
     except:
         return None
-
-if __name__ == '__main__':
-    grab()

@@ -95,6 +95,10 @@ class Settings:
                  capture_hotkey:str='', exit_hotkey:str='',
                  tesseract_path:str='', languages:str=''):
         # Code smell but I can't figure out a better way of doing this. Also pyright doesn't like this.
+        self.capture_hotkey: 'str'
+        self.exit_hotkey: 'str'
+        self.tesseract_path: 'str'
+        self.languages: 'str'
         self._try_setattr('capture_hotkey', capture_hotkey)
         self._try_setattr('exit_hotkey', exit_hotkey)
         self._try_setattr('tesseract_path', tesseract_path)
