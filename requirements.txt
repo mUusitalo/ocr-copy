@@ -3,7 +3,7 @@ Pillow==8.2.0
 pynput==1.7.3
 pyperclip==1.8.2
 pytesseract==0.3.7
-pywin32==300
+pywin32==301
 pyzbar==0.1.8
 screeninfo==0.6.7
 six==1.15.0
