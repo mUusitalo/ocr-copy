@@ -1,5 +1,5 @@
 import pyperclip
-from typing import NoReturn, Union
+from typing import NoReturn, Optional
 
 from src.analyze import analyze
 from src.graphics import grab
@@ -10,11 +10,11 @@ def main() -> NoReturn:
     while True:
         hotkey_listener.listen()
         
-        image: Union[Image, None] = grab()
+        image: Optional[Image] = grab()
 
         if image is None: continue
 
-        output: str = analyze(image)
+        output = analyze(image)
         
         print(f"Output: {output}")
         if output:

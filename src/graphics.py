@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import Iterable, Mapping, Union
+from typing import Optional, Iterable
 from desktopmagic.screengrab_win32 import getRectAsImage
 from PIL.Image import Image
 
@@ -14,10 +14,10 @@ class _App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.init_tk()
-        self.frame: Union[tk.Frame, None] = None
-        self.pos1_relative: Union[Pos2, None] = None
-        self.pos1_absolute: Union[Pos2, None] = None
-        self.pos2_absolute: Union[Pos2, None] = None
+        self.frame: Optional[tk.Frame] = None
+        self.pos1_relative: Optional[Pos2] = None
+        self.pos1_absolute: Optional[Pos2] = None
+        self.pos2_absolute: Optional[Pos2] = None
         self.update_geometry()
 
     def init_tk(self) -> None:
@@ -71,7 +71,7 @@ class _App(tk.Tk):
         self.geometry('{}x{}+{}+{}'.format(str(monitor.width), str(monitor.height), str(monitor.x), str(monitor.y)))
         self.cancel_update_id = self.after(5, self.update_geometry)
 
-def _run_tkinter() -> tuple[Union[Pos2, None], Union[Pos2, None]]: #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
+def _run_tkinter() -> tuple[Optional[Pos2], Optional[Pos2]]: #Initialises tkinter loop and starts the loop. Returns pos1 and pos2
     app: _App = _App()
     app.bind('<Escape>', app.exit)
     app.mainloop()
@@ -81,7 +81,7 @@ def _sort_coords(pos_tuple):
     coordinates = map(sorted, zip(*pos_tuple))
     return (Pos2(*l) for l in zip(*coordinates))
 
-def grab() -> Union[Image, None]:
+def grab() -> Optional[Image]:
     try:
         pos1, pos2 = _sort_coords(_run_tkinter())
         image = getRectAsImage((*pos1, *pos2)).convert('L') # BUG, breaks with Window's content scaling

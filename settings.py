@@ -14,10 +14,10 @@ class InputError(Exception):
     """Class that indicates bad user inputs"""
     pass
 
-SETTINGS_PATH: str = 'settings.json'
+SETTINGS_PATH = 'settings.json'
 
 # Available languages are listed here because pytesseract.get_languages() requires a valid path to tesseract.exe
-AVAILABLE_LANGUAGES: set[str] = {
+AVAILABLE_LANGUAGES = {
     'afr', 'amh', 'ara', 'asm', 'aze', 'aze_cyrl', 'bel', 'ben', 'bod',
     'bos', 'bre', 'bul', 'cat', 'ceb', 'ces', 'chi_sim', 'chi_sim_vert',
     'chi_tra', 'chi_tra_vert', 'chr', 'cos', 'cym', 'dan', 'deu', 'div',
@@ -84,7 +84,7 @@ class Settings:
     Uses SettingsValidityTester for testing inputs.
     """
     # Dict containing each setting and the method for testing it's input value.
-    value_test_map = {
+    value_test_map: dict[str, Callable[[str], str]] = {
         'capture_hotkey': SettingValidityTester.hotkey,
         'exit_hotkey': SettingValidityTester.hotkey,
         'tesseract_path': SettingValidityTester.tesseract_path,
@@ -127,7 +127,7 @@ class Settings:
         for setting in self.value_test_map.keys():
             yield setting, getattr(self, setting)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Generate user-readable string containing all settings and their values."""
         return '\n'.join(f"    {setting}: {value or '-'}" for setting, value in self)
 
@@ -136,8 +136,8 @@ class Settings:
         Call 'callback' if an InputError is caught.
         """
         try:
-            stripped: str = value.strip()
-            output: str = self.value_test_map[name](stripped) if stripped else ''
+            stripped = value.strip()
+            output = self.value_test_map[name](stripped) if stripped else ''
             setattr(self, name, output)
         except InputError as e:
             print(e)
@@ -148,16 +148,16 @@ class Settings:
         Call function again if the value is invalid but don't do anything if the input is blank.
         """
         print(f"\nCurrent {setting}: {getattr(self, setting) or '-'}")
-        output: str = input(f"Enter {setting}: ")
+        output = input(f"Enter {setting}: ")
         if not output: return # Setting skipped
         self._try_setattr(setting, output, lambda: self._prompt_setting(setting))
 
     def _reset_defaults(self) -> None:
         """Reset default settings. If DEFAULT_SETTINGS doesn't exist, use a blank Settings object."""
         try:
-            new_settings: Settings = DEFAULT_SETTINGS
+            new_settings = DEFAULT_SETTINGS
         except:
-            new_settings: Settings = Settings()
+            new_settings = Settings()
         for key, value in new_settings:
             self._try_setattr(key, value)
             
@@ -165,7 +165,7 @@ class Settings:
         """Ask the user whether they want to reset the values.
         If yes, then copy the default settings.
         """
-        reset: str = input("Restore defaults? (y/N):")
+        reset = input("Restore defaults? (y/N):")
         if reset == 'y':
             self._reset_defaults()
             print(f"\nCurrent settings:\n{str(self)}\n")
